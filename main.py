@@ -187,7 +187,7 @@ def graph_economics(dg):
     plt.savefig("economics.pdf")
     plt.show()
 
-def graph_political(dg):
+def graph_political(dg, categorical_data=None):
     maxrow=2; maxcol=3
     fig, axs = plt.subplots(maxrow, maxcol, figsize=(15,10))
     fig.suptitle('State-Wide Social Norm Index - Political - Wave 7 - Sorted')
@@ -205,34 +205,48 @@ def graph_political(dg):
          4: '#e7298a'        # Bold Pink (Strongly Disagree)
     }
     label_map = {
+        -1: "Missing",
         1: "Strongly Agree",
         2: "Agree",
         3: "Disagree",
         4: "Strongly Disagree"
     }
+    expected_values = [-1, 1, 2, 3, 4]
     for x in range(2):
         for y in range(3):
+# For each question
             index = 3 * x + y
+            print('Index is ', index)
             if (index < len(demographics)):
+                col = demographics[index]
+                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
-
-                pos_cols = [c for c in [1,2] if c in counts.columns]
-                counts['sort_val'] = counts[pos_cols].sum(axis=1)
-                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
+                if((x==0) & (y==0)):
+                    print('Counts - inside loop', counts)
 
                 counts = counts.rename(columns=label_map)
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors)
                 axs[x, y].set_title(title[index])
                 axs[x, y].set_xlabel(xlabel[index])
                 axs[x, y].set_ylabel("Percentage (%)")
-                axs[x, y].set_ylim(0,1)
+                axs[x, y].set_ylim(0, 1)
                 axs[x, y].tick_params(axis='x', labelrotation=45)
 
+                for s in ['Bihar']:
+                    for l in range(1, 5, 1):
+                        print('Counts', label_map[l], counts[label_map[l]][s])
+
+        #                pos_cols = [c for c in [1,2] if c in counts.columns]
+#                counts['sort_val'] = counts[pos_cols].sum(axis=1)
+#                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
+
+
+# Averaging Across All Questions
         avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
         avg_df = avg_df[avg_df['response'] > 0]  # Filter invalid responses
         avg_counts = pd.crosstab(avg_df['STATE_NAME'], avg_df['response'], normalize='index')
@@ -257,6 +271,17 @@ def graph_political(dg):
         axs[b, a].tick_params(axis='x', labelrotation=45)
         for label in axs[b, a].get_xticklabels():
             label.set_horizontalalignment('right')
+
+    print('Counts outside loop', counts)
+    print ('Data for Bihar')
+    print('Counts', counts['Agree']['Bihar'])
+    for s in ['Bihar']:
+        for l in range(1,5,1):
+            print('Counts', label_map[l], counts[label_map[l]][s])
+
+
+    print(label_map[2])
+
 
     plt.tight_layout()
     plt.savefig("political.pdf")
@@ -429,8 +454,8 @@ if __name__ == '__main__':
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 
     dg = get_data()
-    graph(dg)
+#    graph(dg)
     graph_political(dg)
-    graph_economics(dg)
-    graph_violence(dg)
-    graph_education(dg)
+#    graph_economics(dg)
+#    graph_violence(dg)
+#    graph_education(dg)
