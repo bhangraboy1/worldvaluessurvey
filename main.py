@@ -3,6 +3,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 
+#Global Definitions
+states = ['Bihar', 'Delhi', 'Haryana', 'Maharashtra', 'Punjab',
+          'Telangana', 'Uttar Pradesh', 'West Bengal']
+answers = [[0.0 for y in range(50)] for s in states]
+expected_values = [-1, 1, 2, 3, 4]
+values = [0, +2, +1, -1, -2]
+full_color_map = {
+    -1: 'lightgray',  # Don't Know / No Answer
+    1: '#1b9e77',  # Bold Green (Strongly Agree)
+    2: '#d95f02',  # Bold Orange (Agree)
+    3: '#7570b3',  # Bold Purple (Disagree)
+    4: '#e7298a',  # Bold Pink (Strongly Disagree)
+    5: '#e7298a'
+}
+label_map = {
+    -1: "Missing",
+    1: "Strongly Agree",
+    2: "Agree",
+    3: "Disagree",
+    4: "Strongly Disagree"
+}
 def print_hi(name):
     # Use a breakpoint in the code line below to debug your script.
     print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
@@ -107,7 +128,7 @@ def graph(dg):
     plt.show()
 
 def graph_economics(dg):
-    maxrow=2; maxcol=3
+    maxrow=2; maxcol=3; offset=5
     fig, axs = plt.subplots(maxrow, maxcol, figsize=(15,10))
     fig.suptitle('State-Wide Social Norm Index - Economics - Wave 7 - Sorted')
     demographics    = ['Q32', 'Q33', 'Q35']
@@ -117,34 +138,21 @@ def graph_economics(dg):
                        'Women Earning More Causes Problems']
     sort            = [True, False, False]
 
-    full_color_map = {
-        -1: 'lightgray',      # Don't Know / No Answer
-         1: '#1b9e77',        # Bold Green (Strongly Agree)
-         2: '#d95f02',        # Bold Orange (Agree)
-         3: '#7570b3',        # Bold Purple (Disagree)
-         4: '#e7298a',         # Bold Pink (Strongly Disagree)
-         5: '#e7298a'
-    }
-    label_map = {
-        1: "Strongly Agree",
-        2: "Agree",
-        3: "Disagree",
-        4: "Strongly Disagree"
-    }
     for x in range(1):
         for y in range(3):
             index = 3 * x + y
             if (index < len(demographics)):
+                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
 
-                pos_cols = [c for c in [1,2] if c in counts.columns]
-                counts['sort_val'] = counts[pos_cols].sum(axis=1)
-                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
+#                pos_cols = [c for c in [1,2] if c in counts.columns]
+#                counts['sort_val'] = counts[pos_cols].sum(axis=1)
+#                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
 
                 counts = counts.rename(columns=label_map)
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors)
@@ -153,6 +161,16 @@ def graph_economics(dg):
                 axs[x, y].set_ylabel("Percentage (%)")
                 axs[x,y].set_ylim(0,1)
                 axs[x, y].tick_params(axis='x', labelrotation=45)
+                s = 0
+                while (s < len(states)):
+                    total  = 0.0
+                    totalv = 0.0
+#                    print('In Economics', states[s])
+                    for l in range(1, 5, 1):
+                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        total  = total  + counts[label_map[l]][states[s]]
+                    answers[s][index+offset] = (totalv / total)
+                    s += 1
             else:
                 axs[x, y].axis('off')
 # Creating an Average SSNI - Economic Index
@@ -187,7 +205,7 @@ def graph_economics(dg):
     plt.savefig("economics.pdf")
     plt.show()
 
-def graph_political(dg, categorical_data=None):
+def graph_political(dg):
     maxrow=2; maxcol=3
     fig, axs = plt.subplots(maxrow, maxcol, figsize=(15,10))
     fig.suptitle('State-Wide Social Norm Index - Political - Wave 7 - Sorted')
@@ -197,28 +215,12 @@ def graph_political(dg, categorical_data=None):
     title           = ['Men Make Better Political Leaders', 'Signing a Petition',
                        'Attending Demonstrations', 'Joining in Boycotts', 'Joining Strikes']
     sort            = [False, False, False, False, False]
-    full_color_map = {
-        -1: 'lightgray',      # Don't Know / No Answer
-         1: '#1b9e77',        # Bold Green (Strongly Agree)
-         2: '#d95f02',        # Bold Orange (Agree)
-         3: '#7570b3',        # Bold Purple (Disagree)
-         4: '#e7298a'        # Bold Pink (Strongly Disagree)
-    }
-    label_map = {
-        -1: "Missing",
-        1: "Strongly Agree",
-        2: "Agree",
-        3: "Disagree",
-        4: "Strongly Disagree"
-    }
-    expected_values = [-1, 1, 2, 3, 4]
+
     for x in range(2):
         for y in range(3):
 # For each question
             index = 3 * x + y
-            print('Index is ', index)
             if (index < len(demographics)):
-                col = demographics[index]
                 categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
                     counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
@@ -226,9 +228,6 @@ def graph_political(dg, categorical_data=None):
                     counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
-                if((x==0) & (y==0)):
-                    print('Counts - inside loop', counts)
-
                 counts = counts.rename(columns=label_map)
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors)
                 axs[x, y].set_title(title[index])
@@ -237,14 +236,18 @@ def graph_political(dg, categorical_data=None):
                 axs[x, y].set_ylim(0, 1)
                 axs[x, y].tick_params(axis='x', labelrotation=45)
 
-                for s in ['Bihar']:
+                s = 0
+                while (s < len(states)):
+                    total  = 0.0
+                    totalv = 0.0
                     for l in range(1, 5, 1):
-                        print('Counts', label_map[l], counts[label_map[l]][s])
-
-        #                pos_cols = [c for c in [1,2] if c in counts.columns]
+                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        total  = total  + counts[label_map[l]][states[s]]
+                    answers[s][index] = (totalv / total)
+                    s += 1
+#                pos_cols = [c for c in [1,2] if c in counts.columns]
 #                counts['sort_val'] = counts[pos_cols].sum(axis=1)
 #                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
-
 
 # Averaging Across All Questions
         avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
@@ -254,8 +257,6 @@ def graph_political(dg, categorical_data=None):
 
         a = (((len(demographics) - 1) % maxcol) + 1) % maxcol
         b = math.floor(((len(demographics) + 1) / maxcol)) - 1
-
-        print("Row", b, "Column", a)
 
         # Sort by aggregate Positive Sentiment
         pos_cols_avg = [c for c in [1, 2] if c in avg_counts.columns]
@@ -272,24 +273,13 @@ def graph_political(dg, categorical_data=None):
         for label in axs[b, a].get_xticklabels():
             label.set_horizontalalignment('right')
 
-    print('Counts outside loop', counts)
-    print ('Data for Bihar')
-    print('Counts', counts['Agree']['Bihar'])
-    for s in ['Bihar']:
-        for l in range(1,5,1):
-            print('Counts', label_map[l], counts[label_map[l]][s])
-
-
-    print(label_map[2])
-
-
     plt.tight_layout()
     plt.savefig("political.pdf")
     plt.show()
-        # Creating an Average SSNI - Economic Index
+
 
 def graph_violence(dg):
-    maxrow=2; maxcol=3
+    maxrow=2; maxcol=3; offset=8
     fig, axs = plt.subplots(maxrow, maxcol, figsize=(15,10))
     fig.suptitle('State-Wide Social Norm Index - Violence - Wave 7 - Sorted')
     demographics    = ['Q189', 'Q191', 'Q137']
@@ -309,26 +299,22 @@ def graph_violence(dg):
          9: '#e729da',
         10: '#e729ea'
     }
-    label_map = {
-        1: "Strongly Agree",
-        2: "Agree",
-        3: "Disagree",
-        4: "Strongly Disagree"
-    }
+
     for x in range(3):
         for y in range(3):
             index = 3 * x + y
             if (index < len(demographics)):
+                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
 
-                pos_cols = [c for c in [1,2] if c in counts.columns]
-                counts['sort_val'] = counts[pos_cols].sum(axis=1)
-                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
+#                pos_cols = [c for c in [1,2] if c in counts.columns]
+#                counts['sort_val'] = counts[pos_cols].sum(axis=1)
+#                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
 
                 counts = counts.rename(columns=label_map)
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors, legend=False)
@@ -337,6 +323,17 @@ def graph_violence(dg):
                 axs[x, y].set_ylabel("Percentage (%)")
                 axs[x, y].set_ylim(0,1)
                 axs[x, y].tick_params(axis='x', labelrotation=45)
+
+                s = 0
+                while (s < len(states)):
+                    total  = 0.0
+                    totalv = 0.0
+                    for l in range(1, 5, 1):
+#                        print('Violence', s, l, index, counts[label_map[l]][states[s]])
+                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        total  = total  + counts[label_map[l]][states[s]]
+                    answers[s][index+offset] = (totalv / total)
+                    s += 1
 
     avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
     avg_df = avg_df[avg_df['response'] > 0]  # Filter invalid responses
@@ -368,7 +365,7 @@ def graph_violence(dg):
     plt.show()
 
 def graph_education(dg):
-    maxrow=2; maxcol=2
+    maxrow=2; maxcol=2; offset=11
     fig, axs = plt.subplots(maxrow, maxcol, figsize=(15,10))
     fig.suptitle('State-Wide Social Norm Index - Violence - Wave 7 - Sorted')
     demographics    = ['Q30']
@@ -388,26 +385,22 @@ def graph_education(dg):
          9: '#e729da',
         10: '#e729ea'
     }
-    label_map = {
-        1: "Strongly Agree",
-        2: "Agree",
-        3: "Disagree",
-        4: "Strongly Disagree"
-    }
+
     for x in range(2):
         for y in range(2):
             index = 3 * x + y
             if (index < len(demographics)):
+                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], dg[demographics[index]], normalize='index')
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
 
-                pos_cols = [c for c in [1,2] if c in counts.columns]
-                counts['sort_val'] = counts[pos_cols].sum(axis=1)
-                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
+#                pos_cols = [c for c in [1,2] if c in counts.columns]
+#                counts['sort_val'] = counts[pos_cols].sum(axis=1)
+#                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
 
                 counts = counts.rename(columns=label_map)
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors, legend=False)
@@ -416,7 +409,16 @@ def graph_education(dg):
                 axs[x, y].set_ylabel("Percentage (%)")
                 axs[x, y].set_ylim(0,1)
                 axs[x, y].tick_params(axis='x', labelrotation=45)
-
+                s = 0
+                while (s < len(states)):
+                    total = 0.0
+                    totalv = 0.0
+                    for l in range(1, 5, 1):
+                        #                        print('Violence', s, l, index, counts[label_map[l]][states[s]])
+                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        total = total + counts[label_map[l]][states[s]]
+                    answers[s][index + offset] = (totalv / total)
+                    s += 1
     avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
     avg_df = avg_df[avg_df['response'] > 0]  # Filter invalid responses
     avg_counts = pd.crosstab(avg_df['STATE_NAME'], avg_df['response'], normalize='index')
@@ -456,6 +458,18 @@ if __name__ == '__main__':
     dg = get_data()
 #    graph(dg)
     graph_political(dg)
-#    graph_economics(dg)
-#    graph_violence(dg)
-#    graph_education(dg)
+    graph_economics(dg)
+    graph_violence(dg)
+    graph_education(dg)
+
+    print("Values Across States for each Question")
+    print("Political First (5), Economics(3), Violence(3), Education(1)")
+
+    for s in range(8):
+        print("%13s" % states[s], end=" ")
+        for q in range(5+3+3+1):
+            print("%6.3f" % answers[s][q], end=" ")
+        print()
+
+
+
