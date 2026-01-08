@@ -6,7 +6,8 @@ import math
 #Global Definitions
 states = ['Bihar', 'Delhi', 'Haryana', 'Maharashtra', 'Punjab',
           'Telangana', 'Uttar Pradesh', 'West Bengal']
-answers = [[0.0 for y in range(50)] for s in states]
+answers     = [[0.0 for y in range(50)] for s in states]
+answers_top = [[0.0 for y in range(50)] for s in states]
 expected_values = [-1, 1, 2, 3, 4]
 values = [0, +2, +1, -1, -2]
 full_color_map = {
@@ -170,6 +171,7 @@ def graph_economics(dg):
                         totalv = totalv + counts[label_map[l]][states[s]] * values[l]
                         total  = total  + counts[label_map[l]][states[s]]
                     answers[s][index+offset] = (totalv / total)
+                    answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
                     s += 1
             else:
                 axs[x, y].axis('off')
@@ -244,6 +246,8 @@ def graph_political(dg):
                         totalv = totalv + counts[label_map[l]][states[s]] * values[l]
                         total  = total  + counts[label_map[l]][states[s]]
                     answers[s][index] = (totalv / total)
+                    answers_top[s][index] = counts[label_map[1]][states[s]] / total
+
                     s += 1
 #                pos_cols = [c for c in [1,2] if c in counts.columns]
 #                counts['sort_val'] = counts[pos_cols].sum(axis=1)
@@ -333,6 +337,8 @@ def graph_violence(dg):
                         totalv = totalv + counts[label_map[l]][states[s]] * values[l]
                         total  = total  + counts[label_map[l]][states[s]]
                     answers[s][index+offset] = (totalv / total)
+                    answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
+
                     s += 1
 
     avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
@@ -418,6 +424,8 @@ def graph_education(dg):
                         totalv = totalv + counts[label_map[l]][states[s]] * values[l]
                         total = total + counts[label_map[l]][states[s]]
                     answers[s][index + offset] = (totalv / total)
+                    answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
+
                     s += 1
     avg_df = dg.melt(id_vars=['STATE_NAME'], value_vars=demographics, value_name='response')
     avg_df = avg_df[avg_df['response'] > 0]  # Filter invalid responses
@@ -464,11 +472,18 @@ if __name__ == '__main__':
 
     print("Values Across States for each Question")
     print("Political First (5), Economics(3), Violence(3), Education(1)")
-
+    print("Averages")
     for s in range(8):
         print("%13s" % states[s], end=" ")
         for q in range(5+3+3+1):
-            print("%6.3f" % answers[s][q], end=" ")
+            print("%7.3f" % answers[s][q], end=" ")
+        print()
+
+    print("Top")
+    for s in range(8):
+        print("%13s" % states[s], end=" ")
+        for q in range(5+3+3+1):
+            print("%7.3f" % answers_top[s][q], end=" ")
         print()
 
 
