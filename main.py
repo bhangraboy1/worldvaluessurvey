@@ -94,7 +94,8 @@ def get_data():
 
     i = 0
     print(dg['C_COW_ALPHA'].iloc[i], dg['A_YEAR'].iloc[i], dg['A_WAVE'].iloc[i],
-          dg['O1_LONGITUDE'].iloc[i], dg['O2_LATITUDE'].iloc[i], dg['N_REGION_ISO'].iloc[i])
+          dg['O1_LONGITUDE'].iloc[i], dg['O2_LATITUDE'].iloc[i], dg['N_REGION_ISO'].iloc[i],
+          dg['W_WEIGHT'])
 
     print(dg)
     return (dg)
@@ -145,10 +146,9 @@ def graph_economics(dg):
             if (index < len(demographics)):
                 categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
-
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 current_colors = [full_color_map[col] for col in counts.columns]
 
 #                pos_cols = [c for c in [1,2] if c in counts.columns]
@@ -225,9 +225,9 @@ def graph_political(dg):
             if (index < len(demographics)):
                 categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
                 counts = counts.rename(columns=label_map)
@@ -310,9 +310,9 @@ def graph_violence(dg):
             if (index < len(demographics)):
                 categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
 
@@ -398,9 +398,9 @@ def graph_education(dg):
             if (index < len(demographics)):
                 categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
                 if (sort[index]):
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 else:
-                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, normalize='index', dropna=False)
+                    counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
 
                 current_colors = [full_color_map[col] for col in counts.columns]
 
@@ -485,6 +485,3 @@ if __name__ == '__main__':
         for q in range(5+3+3+1):
             print("%7.3f" % answers_top[s][q], end=" ")
         print()
-
-
-
