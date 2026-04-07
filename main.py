@@ -1,15 +1,26 @@
 # This is a sample Python script.
 import pandas as pd
+from factor_analyzer import FactorAnalyzer
 import matplotlib.pyplot as plt
 import math
+import csv
 
 #Global Definitions
 states = ['Bihar', 'Delhi', 'Haryana', 'Maharashtra', 'Punjab',
           'Telangana', 'Uttar Pradesh', 'West Bengal']
-answers     = [[0.0 for y in range(50)] for s in states]
-answers_top = [[0.0 for y in range(50)] for s in states]
+QUESTIONS=12
+answers     = [[0.0 for y in range(12)]  for s in states]
+answers_f   = [[0.0 for y in range(10)]  for s in states]
+answers_top = [[0.0 for y in range(12)]  for s in states]
 expected_values = [-1, 1, 2, 3, 4]
+expected_values_5  = [-1, 1, 2, 3, 4, 5]
+expected_values_10 = [-1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
 values = [0, +2, +1, -1, -2]
+values_5 = [0, +2, +1, 0, -1, -2]
+values_10 = [0, -2, -1.56, -1.11, -0.67, -0.22, +0.22, +0.67, +1.11, +1.56, +2]
+values_reverse3 = [0, -2, 0, +2, 0]
+nsso_statecodes = [10, 6, 27, 3, -1, 9, 19, 7]
 full_color_map = {
     -1: 'lightgray',  # Don't Know / No Answer
     1: '#1b9e77',  # Bold Green (Strongly Agree)
@@ -25,11 +36,24 @@ label_map = {
     3: "Disagree",
     4: "Strongly Disagree"
 }
+label_map_10 = {
+    -1: "Missing",
+    1: "Never Justified",
+    2: "Scale 2",
+    3: "Scale 3",
+    4: "Scale 4",
+    5: "Scale 5",
+    6: "Scale 6",
+    7: "Scale 7",
+    8: "Scale 8",
+    9: "Scale 9",
+    10: "Scale 10"
+}
 def print_hi(name):
     # Use a breakpoint in the code line below to debug your script.
     print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
 
-def get_data():
+def get_data(file_paths, years=None):
     iso_to_state = {
         356004: 'Bihar',
         356008: 'Haryana',
@@ -75,13 +99,26 @@ def get_data():
         356019:  'OBC',
         356024:  'General'
     }
-    df = pd.read_csv('WVS_Cross-National_Wave_7_csv_v6_0.csv')
+    df_list = []
+    for file in file_paths:
+        try:
+            temp = pd.read_csv(file, encoding='latin1', sep=';', low_memory=False)
+        except Exception as e:
+            print(e)
+        df_list.append(temp)
+    df = pd.concat(df_list, ignore_index=True)
+    print("Combined Size:", df.shape)
+
 #    print(df.loc[0])
     print("Size")
     print(df.shape)
 
     dg = pd.DataFrame()
+# Filter and keep only India
     dg = df[df['C_COW_ALPHA'] == 'IND'].copy()
+#Optional Filter for years
+#    dg = dg[dg['A_YEAR'].isin(years)]
+
     dg['STATE_NAME'] = dg['N_REGION_ISO'].map(iso_to_state)
     dg['MARITAL_STATUS'] = dg['Q273'].map(ms_to_marital)
     dg['LANGUAGE'] = dg['Q272'].map(code_to_lang)
@@ -139,6 +176,7 @@ def graph_economics(dg):
                        'Jobs are Scarce, men Should have Priority',
                        'Women Earning More Causes Problems']
     sort            = [True, False, False]
+    maxchoices= [4, 5, 5]
 
     for x in range(1):
         for y in range(3):
@@ -167,11 +205,18 @@ def graph_economics(dg):
                     total  = 0.0
                     totalv = 0.0
 #                    print('In Economics', states[s])
-                    for l in range(1, 5, 1):
-                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
-                        total  = total  + counts[label_map[l]][states[s]]
-                    answers[s][index+offset] = (totalv / total)
-                    answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
+                    for l in range(1, maxchoices[index], 1):
+                        if (index == 0):
+                            totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                            total  = total  + counts[label_map[l]][states[s]]
+                            answers[s][index + offset] = (totalv / total)
+                            answers_top[s][index + offset] = counts[label_map[1]][states[s]] / total
+                        else:
+                            totalv = totalv + counts[label_map[l]][states[s]] * values_5[l]
+                            total  = total  + counts[label_map[l]][states[s]]
+                            answers[s][index + offset] = (totalv / total)
+                            answers_top[s][index + offset] = counts[label_map[1]][states[s]] / total
+
                     s += 1
             else:
                 axs[x, y].axis('off')
@@ -243,7 +288,10 @@ def graph_political(dg):
                     total  = 0.0
                     totalv = 0.0
                     for l in range(1, 5, 1):
-                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        if (index == 0):
+                            totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                        else:
+                            totalv = totalv + counts[label_map[l]][states[s]] * values_reverse3[l]
                         total  = total  + counts[label_map[l]][states[s]]
                     answers[s][index] = (totalv / total)
                     answers_top[s][index] = counts[label_map[1]][states[s]] / total
@@ -303,12 +351,12 @@ def graph_violence(dg):
          9: '#e729da',
         10: '#e729ea'
     }
-
+    maxchoices= [10, 10, 4]
     for x in range(3):
         for y in range(3):
             index = 3 * x + y
             if (index < len(demographics)):
-                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values)
+                categorical_data = pd.Categorical(dg[demographics[index]], categories=expected_values_10)
                 if (sort[index]):
                     counts = pd.crosstab(dg['STATE_NAME'], categorical_data, aggfunc='sum',  normalize='index', values=dg['W_WEIGHT'], dropna=False)
                 else:
@@ -320,7 +368,9 @@ def graph_violence(dg):
 #                counts['sort_val'] = counts[pos_cols].sum(axis=1)
 #                counts = counts.sort_values(by='sort_val', ascending=False).drop(columns=['sort_val'])
 
-                counts = counts.rename(columns=label_map)
+                if (index != 2): counts = counts.rename(columns=label_map_10)
+                else: counts = counts.rename(columns=label_map)
+
                 counts.plot(kind='bar', stacked=True, ax=axs[x, y], color=current_colors, legend=False)
                 axs[x, y].set_title(title[index])
                 axs[x, y].set_xlabel(xlabel[index])
@@ -332,12 +382,20 @@ def graph_violence(dg):
                 while (s < len(states)):
                     total  = 0.0
                     totalv = 0.0
-                    for l in range(1, 5, 1):
-#                        print('Violence', s, l, index, counts[label_map[l]][states[s]])
-                        totalv = totalv + counts[label_map[l]][states[s]] * values[l]
-                        total  = total  + counts[label_map[l]][states[s]]
-                    answers[s][index+offset] = (totalv / total)
-                    answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
+                    for l in range(1, maxchoices[index], 1):
+#                        print ("In Violence", s, l, index)
+                        if (index != 2):
+#                                print('Violence', s, l, index, counts[label_map_10[l]][states[s]])
+                                totalv = totalv + counts[label_map_10[l]][states[s]] * values_10[l]
+                                total  = total  + counts[label_map_10[l]][states[s]]
+                                answers[s][index+offset] = (totalv / total)
+                                answers_top[s][index+offset] = counts[label_map_10[1]][states[s]] / total
+                        else:
+#                                print('Violence', s, l, index, counts[label_map[l]][states[s]])
+                                totalv = totalv + counts[label_map[l]][states[s]] * values[l]
+                                total  = total  + counts[label_map[l]][states[s]]
+                                answers[s][index+offset] = (totalv / total)
+                                answers_top[s][index+offset] = counts[label_map[1]][states[s]] / total
 
                     s += 1
 
@@ -457,13 +515,50 @@ def graph_education(dg):
     plt.show()
 #   plt.close()
 
+def factor_analysis(data_all, data):
+    maxfactors = 3
+    fa = FactorAnalyzer(n_factors=maxfactors, rotation=None)
+    fa.fit(data)
+
+# The Loadings determine the Interpretation of the Latent (Intangible) Factors
+    print("Loadings", fa.loadings_)
+    ev, v = fa.get_eigenvalues()
+
+# Get Factor Scores
+    latent_factors = fa.transform(data)
+    cols = [f'f{i+1}' for i in range(maxfactors)]
+    df_factors = pd.DataFrame(latent_factors, columns=cols)
+    df_factors.insert(0, 'State', nsso_statecodes)
+    df_factors.to_csv('factors.csv', index=False)
+
+# WVS Averages
+# - this output file will have the state code in field "state"
+# - this output file will have the average score for each of the questions that have been selected
+# - this output file will have the year in field "year"
+
+    dtemp = pd.DataFrame(data_all)
+    dtemp.insert(0, 'State', nsso_statecodes)
+    dtemp.to_csv('wvs_averages.csv', index=False)
+# The Factors are the Actual Values for these new Intangible Factors
+    print("DF Factors", df_factors)
+
+# The Eigevalues represents the Share of the Variance is explained by each factors
+    print("Original Eigen Values", ev)
+    print("Common Factor Eigenvalues", v)
+    plt.scatter(range(1, 11), ev)
+    plt.plot(range(1, 11), ev)
+    plt.title('Scree Plot')
+    plt.show()
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     print_hi('PyCharm')
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
-
-    dg = get_data()
+    files = [
+        "WVS_Wave_6.csv"
+    ]
+    dg = get_data(files, years=[2010])
 #    graph(dg)
     graph_political(dg)
     graph_economics(dg)
@@ -485,3 +580,13 @@ if __name__ == '__main__':
         for q in range(5+3+3+1):
             print("%7.3f" % answers_top[s][q], end=" ")
         print()
+# Exclude 1 Earnings Question and 3 Violence Questions
+    for s in range(8):
+        count = 0
+        for q in range(5+3+3+1):
+            if ((q <= 6) | (q==8) | (q==9) | (q == 11)):
+                print("Count", s, q, count)
+                answers_f[s][count] = answers[s][q]
+                count = count + 1
+
+    factor_analysis(answers, answers_f)
